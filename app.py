@@ -3,6 +3,8 @@ import tensorflow as tf
 from tensorflow.keras.models import load_model
 import numpy as np
 from PIL import Image
+import requests
+import os
 
 # ---- PAGE CONFIG ----
 st.set_page_config(page_title="AI Cat vs Dog Classifier", page_icon="🐾", layout="wide")
@@ -17,13 +19,7 @@ st.markdown("""
         font-family: 'Segoe UI', sans-serif;
     }
 
-    /* --- Option A: Hide Toolbar (Uncomment this to hide) ---
-    header[data-testid="stHeader"] {
-        display: none;
-    }
-    */
-
-    /* --- Option B: Style Toolbar (Keep visible but dark) --- */
+    /* Toolbar Styling */
     header[data-testid="stHeader"] {
         background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
         color: #fff;
@@ -120,7 +116,6 @@ st.markdown("""
 # ---- SIDEBAR ----
 st.sidebar.markdown("## ⚡ About This App")
 st.sidebar.info("""
-                
 This is a **Deep Learning App** built with:
 
 - TensorFlow (CNN Model)
@@ -131,12 +126,22 @@ This is a **Deep Learning App** built with:
 [LinkedIn](https://www.linkedin.com/in/engr-ziaullah-7672ab260)
 """)
 
-# ---- LOAD MODEL ----
+# ---- LOAD MODEL FROM HUGGING FACE ----
 @st.cache_resource
 def load_cnn_model():
-    return load_model("cat_dog_model.keras")
+    MODEL_URL = "https://huggingface.co/Engrziaullah-bj9/cat_vs_dog_classifier/resolve/main/cat_dog_model.h5"
+    MODEL_PATH = "cat_dog_model.h5"
+
+    if not os.path.exists(MODEL_PATH):
+        with st.spinner("Downloading AI model... Please wait (first run only)."):
+            r = requests.get(MODEL_URL)
+            with open(MODEL_PATH, "wb") as f:
+                f.write(r.content)
+
+    return load_model(MODEL_PATH)
 
 model = load_cnn_model()
+st.success("✅ Model Loaded Successfully!")
 
 # ---- PAGE HEADER ----
 st.markdown("<div class='title'>🐶 Cat vs Dog Classifier 🐱</div>", unsafe_allow_html=True)
@@ -153,7 +158,7 @@ with tab1:
         img = Image.open(uploaded_file).convert('RGB')
         st.image(img, caption="Uploaded Image", use_column_width=True)
 
-        # Preprocess image
+        # Preprocess
         img_resized = img.resize((256, 256))
         img_array = np.array(img_resized) / 255.0
         img_array = np.expand_dims(img_array, axis=0)
@@ -164,7 +169,6 @@ with tab1:
         confidence = round(float(prediction) * 100, 2) if prediction > 0.5 else round((1 - float(prediction)) * 100, 2)
         label = "Dog 🐶" if prediction > 0.5 else "Cat 🐱"
 
-        # Prediction card
         st.markdown(f"""
             <div class='prediction-card'>
                 <h2 style="color:#00ffff; text-shadow:0px 0px 10px #00e6e6;">{label}</h2>
@@ -173,7 +177,6 @@ with tab1:
         """, unsafe_allow_html=True)
 
         st.progress(int(confidence))
-
     else:
         st.info("👋 Upload a Cat, Dog, or WEBP image above to start.")
 
@@ -197,11 +200,9 @@ with tab3:
        Our **deep learning model (CNN)** instantly processes your image to detect if it’s a **cat or dog**.
 
     3. **View the Results**  
-       The app shows a **clear prediction** (Cat 🐱 or Dog 🐶) along with a **confidence score** (how certain the AI is).  
-       A **visual confidence gauge** helps you understand the result at a glance.
-
+       See a **clear prediction** (Cat 🐱 or Dog 🐶) along with a **confidence score**.  
+       A **visual progress bar** helps you understand the result at a glance.
     """)
-
 
 # ---- FOOTER ----
 st.markdown("<div class='footer'>Powered by TensorFlow & Streamlit | Dark Gradient Edition</div>", unsafe_allow_html=True)
